@@ -27,6 +27,16 @@ The API listens on port 5000 by default. `GET /api/health` provides a health che
 
 The Next.js frontend forwards requests through its same-origin `/api/*` route. After a successful login, the frontend proxy stores the JWT in an HttpOnly, same-site cookie and forwards it to this API as a bearer token. There is no public registration route; create the initial admin through the seed command.
 
+## Technical decisions
+
+### Stateless JWT authentication behind the frontend proxy
+
+The API signs a JWT after verifying the administrator's bcrypt-hashed password, then verifies that token on protected requests. The frontend proxy keeps the token in an HttpOnly cookie and forwards it as a bearer token, so client-side JavaScript does not need to read or store the JWT. This keeps authentication state out of a server-side session store while preserving a same-origin browser experience.
+
+### MongoDB indexes and server-side aggregation
+
+Doctor and patient searches, filters, and pagination run in MongoDB rather than against full collections in the browser. Schema indexes cover common text searches and filter/sort combinations; list handlers fetch the requested page and matching count concurrently. Dashboard totals and breakdowns use aggregation pipelines so only summary data is returned to the client.
+
 ## Endpoints
 
 - `POST /api/auth/login`, `GET /api/auth/me`
