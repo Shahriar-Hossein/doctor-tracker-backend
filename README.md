@@ -13,10 +13,11 @@ npm install
 
 Set `MONGO_URI`, `JWT_SECRET`, `CLIENT_URL`, `ADMIN_NAME`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD` in `.env`. Use a private JWT secret and a unique admin password with at least 12 characters.
 
-Create the initial administrator, then start the API:
+Create the initial administrator and seed doctors & patients, then start the API:
 
 ```sh
 npm run seed:admin
+npm run seed:doctors   # or npm run seed
 npm run dev
 ```
 

@@ -4,9 +4,14 @@ import { connectDB } from "../src/config/db.js";
 import { User } from "../src/models/User.js";
 
 const { ADMIN_NAME, ADMIN_EMAIL, ADMIN_PASSWORD } = process.env;
-if (!ADMIN_NAME || !ADMIN_EMAIL || !ADMIN_PASSWORD || ADMIN_PASSWORD.length < 12) {
+if (
+  !ADMIN_NAME ||
+  !ADMIN_EMAIL ||
+  !ADMIN_PASSWORD ||
+  ADMIN_PASSWORD.length < 8
+) {
   throw new Error(
-    "Set ADMIN_NAME, ADMIN_EMAIL, and an ADMIN_PASSWORD of at least 12 characters",
+    "Set ADMIN_NAME, ADMIN_EMAIL, and an ADMIN_PASSWORD of at least 8 characters",
   );
 }
 
