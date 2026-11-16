@@ -19,6 +19,7 @@ const patientSchema = new mongoose.Schema(
 
 patientSchema.index({ doctor: 1, createdAt: -1 });
 patientSchema.index({ condition: 1, createdAt: -1 });
+patientSchema.index({ createdAt: -1 });
 patientSchema.index({ name: "text", condition: "text", phone: "text" });
 
 export const Patient = mongoose.model("Patient", patientSchema);

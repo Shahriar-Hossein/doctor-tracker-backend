@@ -2,6 +2,10 @@ import { Doctor } from "../models/Doctor.js";
 import { Patient } from "../models/Patient.js";
 
 export const getDashboardStats = async (_req, res) => {
+  const dailyStart = new Date();
+  dailyStart.setUTCHours(0, 0, 0, 0);
+  dailyStart.setUTCDate(dailyStart.getUTCDate() - 13);
+
   const [
     totalDoctors,
     totalPatients,
@@ -17,19 +21,23 @@ export const getDashboardStats = async (_req, res) => {
           from: "patients",
           localField: "_id",
           foreignField: "doctor",
-          as: "patients",
+          pipeline: [{ $count: "count" }],
+          as: "patientCounts",
         },
       },
       {
         $project: {
           name: 1,
           specialization: 1,
-          patientCount: { $size: "$patients" },
+          patientCount: {
+            $ifNull: [{ $arrayElemAt: ["$patientCounts.count", 0] }, 0],
+          },
         },
       },
       { $sort: { patientCount: -1 } },
     ]),
     Patient.aggregate([
+      { $match: { createdAt: { $gte: dailyStart } } },
       {
         $group: {
           _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
