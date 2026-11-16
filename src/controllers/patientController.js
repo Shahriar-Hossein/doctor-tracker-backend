@@ -29,9 +29,15 @@ const addDateRange = (query, startDate, endDate) => {
       throw Object.assign(new Error("Invalid startDate"), { statusCode: 400 });
   }
   if (endDate) {
-    range.$lte = new Date(endDate);
-    if (Number.isNaN(range.$lte.getTime()))
+    const inclusiveDate = new Date(endDate);
+    if (Number.isNaN(inclusiveDate.getTime()))
       throw Object.assign(new Error("Invalid endDate"), { statusCode: 400 });
+    if (/^\d{4}-\d{2}-\d{2}$/.test(String(endDate))) {
+      inclusiveDate.setUTCDate(inclusiveDate.getUTCDate() + 1);
+      range.$lt = inclusiveDate;
+    } else {
+      range.$lte = inclusiveDate;
+    }
   }
   query.createdAt = range;
 };
@@ -49,11 +55,7 @@ export const getPatients = async (req, res) => {
   const query = {};
   if (search) {
     const term = String(search).slice(0, 100);
-    const pattern = new RegExp(
-      term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
-      "i",
-    );
-    query.$or = [{ name: pattern }, { condition: pattern }, { phone: pattern }];
+    query.$text = { $search: term };
   }
   if (condition)
     query.condition = new RegExp(

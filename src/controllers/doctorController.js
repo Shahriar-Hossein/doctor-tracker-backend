@@ -29,9 +29,15 @@ const addDateRange = (query, startDate, endDate) => {
       throw Object.assign(new Error("Invalid startDate"), { statusCode: 400 });
   }
   if (endDate) {
-    range.$lte = new Date(endDate);
-    if (Number.isNaN(range.$lte.getTime()))
+    const inclusiveDate = new Date(endDate);
+    if (Number.isNaN(inclusiveDate.getTime()))
       throw Object.assign(new Error("Invalid endDate"), { statusCode: 400 });
+    if (/^\d{4}-\d{2}-\d{2}$/.test(String(endDate))) {
+      inclusiveDate.setUTCDate(inclusiveDate.getUTCDate() + 1);
+      range.$lt = inclusiveDate;
+    } else {
+      range.$lte = inclusiveDate;
+    }
   }
   query.createdAt = range;
 };
@@ -46,15 +52,7 @@ export const getDoctors = async (req, res) => {
   const query = {};
   if (search) {
     const term = String(search).slice(0, 100);
-    const pattern = new RegExp(
-      term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
-      "i",
-    );
-    query.$or = [
-      { name: pattern },
-      { specialization: pattern },
-      { hospital: pattern },
-    ];
+    query.$text = { $search: term };
   }
   if (specialization) query.specialization = specialization;
   addDateRange(query, startDate, endDate);
@@ -69,11 +67,41 @@ export const getDoctors = async (req, res) => {
   });
 };
 
+export const updateDoctor = async (req, res) => {
+  const updated = await Doctor.findByIdAndUpdate(req.params.id, req.body, {
+    new: true,
+    runValidators: true,
+  });
+  if (!updated) return res.status(404).json({ message: "Doctor not found" });
+  res.json(updated);
+};
+
+export const deleteDoctor = async (req, res) => {
+  if (await Patient.exists({ doctor: req.params.id })) {
+    return res.status(409).json({
+      message: "Reassign or remove this doctor's patients before deleting the doctor",
+    });
+  }
+  const deleted = await Doctor.findByIdAndDelete(req.params.id);
+  if (!deleted) return res.status(404).json({ message: "Doctor not found" });
+  res.status(204).send();
+};
+
 export const getDoctorWithPatients = async (req, res) => {
-  const [doctor, patients] = await Promise.all([
+  const { page, limit, skip } = getPagination(req.query);
+  const [doctor, patients, total] = await Promise.all([
     Doctor.findById(req.params.id).lean(),
-    Patient.find({ doctor: req.params.id }).sort({ createdAt: -1 }).lean(),
+    Patient.find({ doctor: req.params.id })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    Patient.countDocuments({ doctor: req.params.id }),
   ]);
   if (!doctor) return res.status(404).json({ message: "Doctor not found" });
-  res.json({ ...doctor, patients });
+  res.json({
+    ...doctor,
+    patients,
+    pagination: { total, page, limit, totalPages: Math.ceil(total / limit) },
+  });
 };
